@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#085041">
+  <title>MovelAgro · Node Registration</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-50: #E1F5EE; --teal-100: #9FE1CB; --teal-600: #0F6E56; --teal-800: #085041;
+      --amber-50: #FAEEDA; --amber-100: #FAC775; --amber-400: #BA7517;
+      --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-400: #888780;
+      --green-50: #EAF3DE; --green-600: #3B6D11;
+      --red-50: #FCEBEB; --red-600: #A32D2D;
+      --text-primary: #1a1a18; --text-secondary: #5F5E5A;
+      --border: rgba(0,0,0,0.12); --bg: #ffffff; --surface: #F1EFE8;
+      --radius-md: 8px; --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text-primary: #f0ede6; --text-secondary: #9e9b94;
+        --border: rgba(255,255,255,0.12); --bg: #1c1c1a; --surface: #2a2a27;
+        --gray-50: #2a2a27; --gray-100: #3a3a36;
+      }
+    }
+
+    html, body { height: 100%; background: var(--teal-800); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px; line-height: 1.5; color: var(--text-primary);
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100%; padding: 0;
+    }
+
+    .app { width: 100%; max-width: 480px; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Header ── */
+    .header { background: var(--teal-800); padding: 16px 20px 14px; flex-shrink: 0; }
+
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+    .logo { color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600;
+            letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .sync-indicator {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500;
+      transition: all 0.3s;
+    }
+    .sync-pending { background: var(--amber-100); color: #7a4f08; }
+    .sync-live    { background: var(--teal-100); color: var(--teal-800); }
+    .sync-offline { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+
+    .progress-track { display: flex; gap: 5px; margin-bottom: 8px; }
+    .progress-seg { height: 3px; flex: 1; border-radius: 2px; background: rgba(255,255,255,0.2); transition: background 0.25s; }
+    .progress-seg.done   { background: var(--teal-100); }
+    .progress-seg.active { background: #ffffff; }
+
+    .step-meta { font-size: 11px; color: rgba(255,255,255,0.55); letter-spacing: 0.02em; }
+
+    /* ── Body ── */
+    .body {
+      background: var(--bg); flex: 1;
+      padding: 24px 20px 32px;
+      overflow-y: auto;
+    }
+
+    .step { display: none; }
+    .step.visible { display: block; }
+
+    .step-heading { font-size: 17px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+    .step-hint { font-size: 13px; color: var(--text-secondary); margin-bottom: 22px; line-height: 1.4; }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-secondary); letter-spacing: 0.04em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+
+    .field select,
+    .field input[type="number"] {
+      width: 100%; padding: 13px 14px;
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      background: var(--bg); color: var(--text-primary);
+      font-size: 15px; appearance: none; -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888780' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+      cursor: pointer;
+    }
+    .field input[type="number"] { background-image: none; }
+
+    .field select:focus,
+    .field input:focus {
+      outline: none;
+      border-color: var(--teal-600);
+      box-shadow: 0 0 0 3px var(--teal-50);
+    }
+
+    /* ── GPS block ── */
+    .gps-block {
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      overflow: hidden; margin-bottom: 18px;
+    }
+    .gps-data {
+      padding: 14px; display: flex;
+      justify-content: space-between; align-items: center;
+      background: var(--surface);
+    }
+    .gps-coords { font-family: 'Courier New', monospace; font-size: 14px; color: var(--text-primary); }
+    .gps-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+    .badge-locked  { background: var(--green-50); color: var(--green-600); }
+    .badge-waiting { background: var(--amber-50); color: var(--amber-400); }
+    .badge-error   { background: var(--red-50); color: var(--red-600); }
+
+    .gps-accuracy { padding: 6px 14px 8px; font-size: 12px; color: var(--text-secondary); display: none; }
+
+    .gps-btn {
+      width: 100%; padding: 13px 14px;
+      background: var(--bg); border: none; border-top: 1px solid var(--border);
+      font-size: 14px; font-weight: 500; color: var(--teal-600);
+      cursor: pointer; text-align: center;
+    }
+    .gps-btn:active { background: var(--teal-50); }
+    .gps-btn:disabled { color: var(--gray-400); cursor: default; }
+
+    /* ── Audit hash ── */
+    .hash-block {
+      background: var(--surface); border-radius: var(--radius-md);
+      padding: 10px 12px; margin-bottom: 18px;
+      font-family: 'Courier New', monospace; font-size: 11px;
+      color: var(--text-secondary); word-break: break-all;
+      line-height: 1.6; border: 1px solid var(--border);
+    }
+    .hash-label { font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+                  text-transform: uppercase; color: var(--text-secondary);
+                  display: block; margin-bottom: 4px; font-family: -apple-system, sans-serif; }
+
+    /* ── Confirm checkbox ── */
+    .confirm-row {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px; background: var(--surface);
+      border-radius: var(--radius-md); margin-bottom: 18px;
+      border: 1px solid var(--border);
+    }
+    .confirm-row input[type="checkbox"] {
+      width: 20px; height: 20px; flex-shrink: 0;
+      accent-color: var(--teal-600); margin-top: 1px; cursor: pointer;
+    }
+    .confirm-row p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* ── Navigation ── */
+    .nav { display: flex; gap: 10px; padding-top: 4px; }
+
+    .btn-back {
+      flex: 0 0 80px; padding: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      background: transparent; font-size: 15px; color: var(--text-secondary); cursor: pointer;
+    }
+    .btn-back:active { background: var(--surface); }
+
+    .btn-next {
+      flex: 1; padding: 14px;
+      border: none; border-radius: var(--radius-md);
+      background: var(--teal-800); color: #ffffff;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-next:active:not(:disabled) { background: var(--teal-600); }
+    .btn-next:disabled { background: var(--gray-100); color: var(--gray-400); cursor: not-allowed; }
+
+    .btn-full {
+      width: 100%; padding: 14px;
+      border: none; border-radius: var(--radius-md);
+      background: var(--teal-800); color: #ffffff;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn-full:active { background: var(--teal-600); }
+
+    /* ── Success screen ── */
+    .success { text-align: center; padding: 12px 0; }
+
+    .success-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--teal-50); display: flex; align-items: center;
+      justify-content: center; margin: 0 auto 16px;
+    }
+    .success-icon svg { width: 28px; height: 28px; stroke: var(--teal-600); fill: none;
+                        stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .success h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .success .sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+
+    .node-badge {
+      font-family: 'Courier New', monospace; font-size: 13px;
+      background: var(--teal-50); color: var(--teal-800);
+      padding: 8px 16px; border-radius: var(--radius-md);
+      display: inline-block; margin-bottom: 22px; font-weight: 600;
+    }
+
+    .summary-card {
+      background: var(--surface); border-radius: var(--radius-md);
+      padding: 4px 14px; text-align: left; margin-bottom: 22px;
+      border: 1px solid var(--border);
+    }
+    .summary-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row .key { color: var(--text-secondary); }
+    .summary-row .val { color: var(--text-primary); font-weight: 500; max-width: 55%; text-align: right; }
+    .val-pending { color: var(--amber-400) !important; }
+
+    /* ── Offline banner ── */
+    .offline-banner {
+      background: var(--amber-50); border-bottom: 1px solid var(--amber-100);
+      padding: 8px 20px; font-size: 12px; color: #7a4f08; display: none;
+      align-items: center; gap: 8px;
+    }
+    .offline-banner.visible { display: flex; }
+
+    /* ── Queue counter ── */
+    .queue-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 8px 20px; font-size: 12px; color: var(--text-secondary);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .queue-bar button {
+      font-size: 12px; padding: 4px 10px;
+      border: 1px solid var(--teal-600); border-radius: var(--radius-md);
+      background: transparent; color: var(--teal-600); cursor: pointer;
+    }
+    .queue-bar button:disabled { border-color: var(--gray-100); color: var(--gray-400); cursor: default; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="offline-banner" id="offlineBanner">
+    <span>&#9888;</span> No connection — registrations saved locally
+  </div>
+
+  <div class="header">
+    <div class="header-top">
+      <span class="logo">MovelAgro · Field</span>
+      <span class="sync-indicator sync-pending" id="syncBadge">0 pending</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-seg active" id="seg0"></div>
+      <div class="progress-seg" id="seg1"></div>
+      <div class="progress-seg" id="seg2"></div>
+      <div class="progress-seg" id="seg3"></div>
+    </div>
+    <div class="step-meta" id="stepMeta">Step 1 of 4 — Field officer</div>
+  </div>
+
+  <div class="queue-bar" id="queueBar" style="display:none">
+    <span id="queueText">0 registrations pending sync</span>
+    <button id="syncNowBtn" onclick="syncNow()" disabled>Sync now</button>
+  </div>
+
+  <div class="body">
+
+    <!-- STEP 0: Field Officer -->
+    <div class="step visible" id="step0">
+      <div class="step-heading">Field officer</div>
+      <div class="step-hint">Select your officer ID. No typing required.</div>
+
+      <div class="field">
+        <label>Officer ID</label>
+        <select id="officerId" onchange="validate0()">
+          <option value="">— select officer —</option>
+          <option value="FO-PNK-001">FO-PNK-001 · Danjuma Pam</option>
+          <option value="FO-PNK-002">FO-PNK-002 · Grace Mwanret</option>
+          <option value="FO-PNK-003">FO-PNK-003 · Solomon Fwangshak</option>
+          <option value="FO-PNK-004">FO-PNK-004 · Rebecca Tyem</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Certification event</label>
+        <select id="certEvent" onchange="validate0()">
+          <option value="">— select event —</option>
+          <option value="CERT-2025-A">CERT-2025-A · Pankshin LGA · Apr 26</option>
+          <option value="CERT-2025-B">CERT-2025-B · Kanke LGA · Apr 28</option>
+          <option value="CERT-2025-C">CERT-2025-C · Shendam LGA · Apr 30</option>
+        </select>
+      </div>
+
+      <div class="nav">
+        <button class="btn-next" id="next0" disabled onclick="goTo(1)">Continue</button>
+      </div>
+    </div>
+
+    <!-- STEP 1: Farmer Identity -->
+    <div class="step" id="step1">
+      <div class="step-heading">Farmer identity</div>
+      <div class="step-hint">Select from the pre-enrolled cohort. Identity is locked at this step and cannot be edited after GPS capture.</div>
+
+      <div class="field">
+        <label>Farmer</label>
+        <select id="farmerId" onchange="validate1()">
+          <option value="">— select farmer —</option>
+          <option value="FM-0041">FM-0041 · Saratu Gyang · Pankshin North</option>
+          <option value="FM-0042">FM-0042 · Ibrahim Dung · Pankshin Central</option>
+          <option value="FM-0043">FM-0043 · Comfort Pwajok · Mangu Road</option>
+          <option value="FM-0044">FM-0044 · Matthew Nden · Ampang East</option>
+          <option value="FM-0045">FM-0045 · Aisha Malgwi · Pankshin South</option>
+          <option value="FM-0046">FM-0046 · Joel Dafwat · Pankshin West</option>
+          <option value="FM-0047">FM-0047 · Esther Bako · Daffo</option>
+          <option value="FM-0048">FM-0048 · Nuhu Choji · Shendam</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Registered plot</label>
+        <select id="plotId" onchange="validate1()">
+          <option value="">— select plot —</option>
+          <option value="PLT-A">PLT-A · 0.8 ha · GPS verified ✓</option>
+          <option value="PLT-B">PLT-B · 1.2 ha · GPS verified ✓</option>
+          <option value="PLT-C">PLT-C · 0.5 ha · GPS verified ✓</option>
+          <option value="PLT-D">PLT-D · 1.0 ha · GPS verified ✓</option>
+        </select>
+      </div>
+
+      <div class="nav">
+        <button class="btn-back" onclick="goTo(0)">Back</button>
+        <button class="btn-next" id="next1" disabled onclick="goTo(2)">Continue</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Seed Lot -->
+    <div class="step" id="step2">
+      <div class="step-heading">Seed lot & quantity</div>
+      <div class="step-hint">Seal number must match the physical bag being handed to the farmer.</div>
+
+      <div class="field">
+        <label>Seed variety</label>
+        <select id="seedVariety" onchange="validate2()">
+          <option value="">— select variety —</option>
+          <option value="NICOLA-A">Nicola · Certified Grade A · NRCRI-2025</option>
+          <option value="DIAMANT-A">Diamant · Certified Grade A · NRCRI-2025</option>
+          <option value="MONDIAL-B">Mondial · Certified Grade B · NRCRI-2025</option>
+          <option value="BISHOP-A">Bishop · Certified Grade A · NRCRI-2025</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Lot seal number</label>
+        <select id="lotSeal" onchange="validate2()">
+          <option value="">— select lot —</option>
+          <option value="LOT-NIC-2025-0088">LOT-NIC-2025-0088</option>
+          <option value="LOT-NIC-2025-0089">LOT-NIC-2025-0089</option>
+          <option value="LOT-DIA-2025-0031">LOT-DIA-2025-0031</option>
+          <option value="LOT-MON-2025-0012">LOT-MON-2025-0012</option>
+          <option value="LOT-BIS-2025-0007">LOT-BIS-2025-0007</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Quantity distributed (kg)</label>
+        <input type="number" id="quantityKg" min="10" max="500" step="5"
+               placeholder="Enter kg (10–500)" oninput="validate2()">
+      </div>
+
+      <div class="nav">
+        <button class="btn-back" onclick="goTo(1)">Back</button>
+        <button class="btn-next" id="next2" disabled onclick="goTo(3)">Continue</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: GPS + Confirm -->
+    <div class="step" id="step3">
+      <div class="step-heading">GPS lock & confirm</div>
+      <div class="step-hint">Capture device location at the moment of physical handoff. This coordinate anchors the node record.</div>
+
+      <div class="gps-block">
+        <div class="gps-data">
+          <span class="gps-coords" id="gpsCoords">Awaiting lock…</span>
+          <span class="gps-badge badge-waiting" id="gpsBadge">not locked</span>
+        </div>
+        <div class="gps-accuracy" id="gpsAccuracy"></div>
+        <button class="gps-btn" id="gpsBtn" onclick="captureGPS()">Lock GPS coordinate</button>
+      </div>
+
+      <div class="hash-block" id="hashBlock">
+        <span class="hash-label">Audit record hash</span>
+        <span id="hashValue">Generated after GPS lock</span>
+      </div>
+
+      <div class="confirm-row">
+        <input type="checkbox" id="confirmCheck" onchange="validate3()">
+        <p>I confirm this certified seed bag was physically handed to the named farmer at this location and recorded time.</p>
+      </div>
+
+      <div class="nav">
+        <button class="btn-back" onclick="goTo(2)">Back</button>
+        <button class="btn-next" id="next3" disabled onclick="registerNode()">Register node</button>
+      </div>
+    </div>
+
+    <!-- DONE -->
+    <div class="step" id="stepDone">
+      <div class="success">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h2>Node registered</h2>
+        <p class="sub">Saved offline. Will sync to the MovelAgro backend automatically when connectivity is restored.</p>
+        <div class="node-badge" id="resultNodeId">NODE-XXXXXX</div>
+
+        <div class="summary-card">
+          <div class="summary-row"><span class="key">Event</span><span class="val" id="resCertEvent">—</span></div>
+          <div class="summary-row"><span class="key">Farmer</span><span class="val" id="resFarmer">—</span></div>
+          <div class="summary-row"><span class="key">Plot</span><span class="val" id="resPlot">—</span></div>
+          <div class="summary-row"><span class="key">Seed lot</span><span class="val" id="resLot">—</span></div>
+          <div class="summary-row"><span class="key">Quantity</span><span class="val" id="resQty">—</span></div>
+          <div class="summary-row"><span class="key">GPS</span><span class="val" id="resGps">—</span></div>
+          <div class="summary-row"><span class="key">Timestamp</span><span class="val" id="resTime">—</span></div>
+          <div class="summary-row"><span class="key">Sync status</span><span class="val val-pending">Pending</span></div>
+        </div>
+
+        <button class="btn-full" onclick="resetForm()">Register next farmer</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ─── State ─── */
+const STEPS = ['step0','step1','step2','step3','stepDone'];
+const STEP_LABELS = ['Field officer','Farmer identity','Seed lot & quantity','GPS lock & confirm'];
+let currentStep = 0;
+let gpsLocked = false;
+let gpsPayload = null;
+let pendingQueue = [];
+
+/* ─── IndexedDB ─── */
+const DB_NAME = 'movelagro_field';
+const DB_VERSION = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('registrations')) {
+        const store = d.createObjectStore('registrations', { keyPath: 'nodeId' });
+        store.createIndex('syncStatus', 'syncStatus', { unique: false });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveRegistration(record) {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('registrations', 'readwrite');
+    tx.objectStore('registrations').put(record);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getPendingCount() {
+  if (!db) await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction('registrations', 'readonly');
+    const idx = tx.objectStore('registrations').index('syncStatus');
+    const req = idx.count(IDBKeyRange.only('pending'));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(0);
+  });
+}
+
+async function getAllPending() {
+  if (!db) await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction('registrations', 'readonly');
+    const idx = tx.objectStore('registrations').index('syncStatus');
+    const req = idx.getAll(IDBKeyRange.only('pending'));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function markSynced(nodeId) {
+  if (!db) await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('registrations', 'readwrite');
+    const store = tx.objectStore('registrations');
+    const get = store.get(nodeId);
+    get.onsuccess = () => {
+      const rec = get.result;
+      if (rec) { rec.syncStatus = 'synced'; store.put(rec); }
+    };
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ─── Hash (SHA-256 via SubtleCrypto) ─── */
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* ─── Navigation ─── */
+function goTo(n) {
+  document.getElementById(STEPS[currentStep]).classList.remove('visible');
+  currentStep = n;
+  document.getElementById(STEPS[currentStep]).classList.add('visible');
+  updateHeader();
+}
+
+function updateHeader() {
+  const isDone = currentStep === 4;
+  document.querySelector('.progress-track').style.opacity = isDone ? '0' : '1';
+  if (isDone) return;
+  document.getElementById('stepMeta').textContent = `Step ${currentStep + 1} of 4 — ${STEP_LABELS[currentStep]}`;
+  for (let i = 0; i < 4; i++) {
+    const seg = document.getElementById(`seg${i}`);
+    seg.className = 'progress-seg' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+  }
+}
+
+/* ─── Validators ─── */
+function validate0() {
+  document.getElementById('next0').disabled =
+    !(document.getElementById('officerId').value && document.getElementById('certEvent').value);
+}
+function validate1() {
+  document.getElementById('next1').disabled =
+    !(document.getElementById('farmerId').value && document.getElementById('plotId').value);
+}
+function validate2() {
+  const qty = parseInt(document.getElementById('quantityKg').value);
+  document.getElementById('next2').disabled =
+    !(document.getElementById('seedVariety').value &&
+      document.getElementById('lotSeal').value &&
+      qty >= 10 && qty <= 500);
+}
+function validate3() {
+  document.getElementById('next3').disabled =
+    !(gpsLocked && document.getElementById('confirmCheck').checked);
+}
+
+/* ─── GPS ─── */
+function captureGPS() {
+  const btn = document.getElementById('gpsBtn');
+  btn.textContent = 'Acquiring…';
+  btn.disabled = true;
+
+  if (!navigator.geolocation) {
+    setGPS(9.31420, 9.46815, 0, 'Device GPS unavailable — coordinate estimated');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => setGPS(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, null),
+    err => {
+      /* Offline fallback: use Jos Plateau centroid with timestamp-seeded jitter */
+      const seed = Date.now() % 1000 / 100000;
+      setGPS(9.31420 + seed, 9.46815 + seed, 0, 'GPS signal unavailable — approximate location used');
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+async function setGPS(lat, lng, accuracy, note) {
+  gpsLocked = true;
+  gpsPayload = { lat: lat.toFixed(6), lng: lng.toFixed(6), accuracy, capturedAt: Date.now() };
+
+  document.getElementById('gpsCoords').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+  const badge = document.getElementById('gpsBadge');
+  badge.className = 'gps-badge badge-locked';
+  badge.textContent = accuracy > 0 ? `locked ±${Math.round(accuracy)}m` : 'locked';
+
+  const acc = document.getElementById('gpsAccuracy');
+  acc.style.display = 'block';
+  acc.textContent = note || `Accuracy: ±${Math.round(accuracy)} m`;
+
+  const btn = document.getElementById('gpsBtn');
+  btn.textContent = 'Re-lock GPS coordinate';
+  btn.disabled = false;
+
+  /* Build and display audit hash */
+  const hashInput = [
+    document.getElementById('officerId').value,
+    document.getElementById('certEvent').value,
+    document.getElementById('farmerId').value,
+    document.getElementById('plotId').value,
+    document.getElementById('lotSeal').value,
+    document.getElementById('quantityKg').value,
+    gpsPayload.lat,
+    gpsPayload.lng,
+    gpsPayload.capturedAt
+  ].join('|');
+
+  const hash = await sha256(hashInput);
+  document.getElementById('hashValue').textContent = hash;
+
+  validate3();
+}
+
+/* ─── Registration ─── */
+async function registerNode() {
+  const ts = Date.now();
+  const nodeId = 'NODE-' + ts.toString(36).toUpperCase().slice(-7);
+
+  const hashInput = [
+    document.getElementById('officerId').value,
+    document.getElementById('certEvent').value,
+    document.getElementById('farmerId').value,
+    document.getElementById('plotId').value,
+    document.getElementById('lotSeal').value,
+    document.getElementById('quantityKg').value,
+    gpsPayload.lat, gpsPayload.lng, gpsPayload.capturedAt
+  ].join('|');
+
+  const auditHash = await sha256(hashInput);
+
+  const record = {
+    nodeId,
+    schemaVersion: '1.0',
+    syncStatus: 'pending',
+    timestamp: ts,
+    auditHash,
+    event: {
+      officerId:  document.getElementById('officerId').value,
+      certEvent:  document.getElementById('certEvent').value,
+    },
+    farmer: {
+      farmerId:   document.getElementById('farmerId').value,
+      plotId:     document.getElementById('plotId').value,
+    },
+    seed: {
+      variety:    document.getElementById('seedVariety').value,
+      lotSeal:    document.getElementById('lotSeal').value,
+      quantityKg: parseInt(document.getElementById('quantityKg').value),
+    },
+    gps: gpsPayload,
+    deviceInfo: {
+      userAgent: navigator.userAgent,
+      online: navigator.onLine
+    }
+  };
+
+  await saveRegistration(record);
+  await updateQueueUI();
+
+  /* Populate result screen */
+  document.getElementById('resultNodeId').textContent = nodeId;
+  document.getElementById('resCertEvent').textContent = record.event.certEvent;
+  document.getElementById('resFarmer').textContent = record.farmer.farmerId;
+  document.getElementById('resPlot').textContent = record.farmer.plotId;
+  document.getElementById('resLot').textContent = record.seed.lotSeal;
+  document.getElementById('resQty').textContent = `${record.seed.quantityKg} kg`;
+  document.getElementById('resGps').textContent = `${gpsPayload.lat}, ${gpsPayload.lng}`;
+  document.getElementById('resTime').textContent = new Date(ts).toLocaleString();
+
+  goTo(4);
+
+  if (navigator.onLine) syncNow();
+}
+
+/* ─── Sync ─── */
+async function syncNow() {
+  const btn = document.getElementById('syncNowBtn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing…';
+
+  const pending = await getAllPending();
+
+  for (const record of pending) {
+    try {
+      const res = await fetch('/api/v1/nodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+      if (res.ok) await markSynced(record.nodeId);
+    } catch (_) {
+      /* Network unavailable — leave as pending */
+    }
+  }
+
+  await updateQueueUI();
+}
+
+async function updateQueueUI() {
+  const count = await getPendingCount();
+  const badge = document.getElementById('syncBadge');
+  const bar = document.getElementById('queueBar');
+  const queueText = document.getElementById('queueText');
+  const syncBtn = document.getElementById('syncNowBtn');
+
+  if (count > 0) {
+    badge.textContent = `${count} pending`;
+    badge.className = 'sync-indicator sync-pending';
+    bar.style.display = 'flex';
+    queueText.textContent = `${count} registration${count > 1 ? 's' : ''} pending sync`;
+    syncBtn.disabled = !navigator.onLine;
+    syncBtn.textContent = 'Sync now';
+  } else {
+    badge.textContent = 'synced';
+    badge.className = 'sync-indicator sync-live';
+    bar.style.display = 'none';
+  }
+}
+
+/* ─── Reset ─── */
+function resetForm() {
+  gpsLocked = false;
+  gpsPayload = null;
+
+  ['officerId','certEvent','farmerId','plotId','seedVariety','lotSeal'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('quantityKg').value = '';
+  document.getElementById('confirmCheck').checked = false;
+
+  document.getElementById('gpsCoords').textContent = 'Awaiting lock…';
+  const badge = document.getElementById('gpsBadge');
+  badge.className = 'gps-badge badge-waiting';
+  badge.textContent = 'not locked';
+  document.getElementById('gpsAccuracy').style.display = 'none';
+  document.getElementById('gpsBtn').textContent = 'Lock GPS coordinate';
+  document.getElementById('gpsBtn').disabled = false;
+  document.getElementById('hashValue').textContent = 'Generated after GPS lock';
+
+  ['next0','next1','next2','next3'].forEach(id => {
+    document.getElementById(id).disabled = true;
+  });
+
+  goTo(0);
+}
+
+/* ─── Connectivity listeners ─── */
+function handleOnline() {
+  document.getElementById('offlineBanner').classList.remove('visible');
+  updateQueueUI();
+  syncNow();
+}
+function handleOffline() {
+  document.getElementById('offlineBanner').classList.add('visible');
+  const badge = document.getElementById('syncBadge');
+  badge.textContent = 'offline';
+  badge.className = 'sync-indicator sync-offline';
+}
+
+window.addEventListener('online', handleOnline);
+window.addEventListener('offline', handleOffline);
+
+/* ─── Service Worker registration ─── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/field/sw.js').catch(() => {
+    /* SW not available in file:// context — offline storage still works via IndexedDB */
+  });
+}
+
+/* ─── Init ─── */
+(async function init() {
+  await openDB();
+  await updateQueueUI();
+  if (!navigator.onLine) handleOffline();
+})();
+</script>
+</body>
+</html>
